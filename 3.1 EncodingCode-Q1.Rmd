@@ -1,0 +1,183 @@
+---
+title: "HW-3 Q1"
+author: "Ankita Kshirsagar"
+date: "2025-10-23"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+# Question 1 - a 
+```{r}
+# Load libraries
+library(tidyverse)
+
+# Reading dataset
+perception_data <- read_csv("/Users/ankitakshirsagar/Desktop/Fall Quarter/Data Visualization/HW-3/PerceptionExperiment.csv")
+
+# Creating new Error column
+data <- perception_data %>%
+  mutate(Error = Response - TrueValue)
+
+# Check column names (just to confirm)
+colnames(data)
+
+# Create boxplot for Error by Test
+ggplot(data, aes(x = Test, y = Error, fill = Test)) +
+  geom_boxplot(outlier.shape = 21.5, outlier.size = 1.6, alpha = 0.7) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "Brown") +
+  labs(
+    title = "Error Distribution Across Encoding Types",
+    x = " Type of Encoding",
+    y = "Error Value = Response - TrueValue"
+  ) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    legend.position = "none"
+  )
+
+```
+
+# Question 1 - b
+
+```{r}
+data <- data %>%
+  mutate(
+    Error = Response - TrueValue,
+    AbsoluteError = abs(Response - TrueValue)
+  )
+
+# Plot (scatterplot + boxplot combo)
+ggplot(data, aes(x = Test, y = AbsoluteError)) +
+  geom_jitter(width = 0.2, alpha = 0.4, color = "lightblue") +
+  geom_boxplot(width = 0.3, outlier.shape = NA, fill = "lightgray", color = "black", alpha = 0.6) +
+  labs(
+    title = "Distribution of Absolute Errors for Each Encoding Type",
+    x = "Type of Encoding",
+    y = "Absolute Error = |Response - TrueValue|"
+  ) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+# Question 1 - c
+
+```{r}
+library(ggplot2)
+library(dplyr)
+
+# Reading data
+data <- read.csv("PerceptionExperiment.csv")
+
+# Create column :  Error
+data <- data %>%
+  mutate(Error = Response - TrueValue)
+
+# Filter for subjects from 56 to 73
+subset_data <- data %>%
+  filter(Subject >= 56 & Subject <= 73)
+
+# Create a simple boxplot comparing Display 1 and Display 2
+ggplot(subset_data, aes(x = factor(Display), y = Error)) +
+  geom_boxplot(fill = "lightgreen", color = "green") +
+  geom_jitter(width = 0.1, alpha = 0.5) +
+  labs(
+    title = "Comparison of Display 1 v/s Display 2 for Subjects : 56–73",
+    x = "Display",
+    y = "Error (Response - TrueValue)"
+  ) +
+  theme_minimal()
+
+
+```
+
+
+# Question 1 - D
+
+```{r}
+library(tidyverse)
+
+# Read the dataset
+experiment_data <- read_csv("PerceptionExperiment.csv")
+
+# Filter for the specific condition (Vertical Distance, Non-Aligned, Display 1)
+subjects_with_anomaly <- experiment_data %>%
+  filter(Test == "Vertical Distance, Non-Aligned", Display == 1) %>%
+  group_by(Subject) %>%
+  # Identify subjects whose responses are all 1.0 across all trials
+  filter(min(Response) == 1 & max(Response) == 1) %>%
+  pull(Subject) %>%
+  unique()
+
+# Print the contiguous anomalous subject sequence
+print(paste(
+  "Contiguous anomalous sequence of Subjects:",
+  paste(sort(subjects_with_anomaly), collapse = ", ")
+))
+
+# Prepare data for visualization (include anomalies + nearby normal subjects for context)
+viz_data <- experiment_data %>%
+  filter(Test == "Vertical Distance, Non-Aligned", Display == 1) %>%
+  filter(Subject %in% c(subjects_with_anomaly, 45:55)) %>%
+  mutate(
+    Anomaly_Status = if_else(
+      Subject %in% subjects_with_anomaly,
+      "Anomalous (Response = 1.0)",
+      "Normal"
+    )
+  )
+
+# Extract unique TrueValues for each Trial
+truevalue_data <- viz_data %>%
+  select(Trial, TrueValue) %>%
+  distinct()
+
+# Create the plot
+ggplot(viz_data, aes(x = factor(Subject), y = Response, color = Trial)) +
+  # Normal responses
+  geom_jitter(
+    data = filter(viz_data, Anomaly_Status == "Normal"),
+    width = 0.2, alpha = 0.6, size = 3
+  ) +
+  # Anomalous responses
+  geom_point(
+    data = filter(viz_data, Anomaly_Status == "Anomalous (Response = 1.0)"),
+    shape = 21, size = 5, fill = "darkred", color = "black"
+  ) +
+  # TrueValue reference lines
+  geom_hline(
+    data = truevalue_data,
+    aes(yintercept = TrueValue, linetype = Trial),
+    color = "gray40", size = 0.5
+  ) +
+  # Highlight line at 1.0
+  geom_hline(yintercept = 1.0, color = "darkred", linetype = "dashed", size = 1) +
+  # Labels and theme
+  labs(
+    title = "Raw Responses for Vertical Distance, Non-Aligned (Display 1)",
+    subtitle = paste(
+      "Highlighting Anomalous '1.0' Responses — Subjects:",
+      paste(sort(subjects_with_anomaly), collapse = ", ")
+    ),
+    x = "Subject ID",
+    y = "Raw Response"
+  ) +
+  scale_linetype_manual(
+    values = c("B" = "dotted", "C" = "dotdash", "D" = "longdash"),
+    name = "Trial (TrueValue)"
+  ) +
+  scale_color_brewer(palette = "Dark2") +
+  theme_minimal(base_size = 13) +
+  theme(
+    axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
+    legend.position = "bottom"
+  )
+
+```
+
+
+
+

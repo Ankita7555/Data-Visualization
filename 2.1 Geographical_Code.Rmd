@@ -1,0 +1,181 @@
+---
+title: "homework 2 "
+author: "Ankita Kshirsagar"
+date: "2025-10-09"
+
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+#Question 
+
+"This data contains a year of data with water level (WL) measurements every hour as a function of Time (i.e. 365 x 24 data points!). Since there is a lot of data, clean it up by smoothing the data by calculating a moving average. Use a window approach with window size that covers a range of days (remember, the data is hourly) and graph the smoothed result. Work with the window to see what size window gives you the best view of the changes in the data while still smoothing the noise well."
+
+
+## R Markdown
+# Portland Water Level Time Series Analysis with the Moving Average
+
+
+# Loading the required libraries
+```{r}
+library(lubridate)
+library(zoo)
+library(ggplot2)
+library(dplyr)
+
+library(tidyverse)
+library(scales) 
+
+library("statebins")
+```
+
+#QUESTION 1 - C
+
+c.(Extra credit) Research how to do a diffusion or tile cartogram in R or D3 and create a cartogram of the state data from this dataset. 
+
+```{r}
+# Read the tab separated file and store into data frame
+food_data_load <- "~/Desktop/Fall Quarter/Data Visualization/HW-2/DATA VISUALIZATION (Tue) - DSC.465 F.25 - 1062025 - 1023 PM/FoodSrvcByCounty.txt"
+
+
+food_data <- read_tsv(food_data_load, col_types = cols())
+
+state_level_data <- food_data %>%
+  filter(is.na(State)) %>%
+  select(County, `FoodServices-2007`) %>%
+  rename(state = County, food_services_2007 = `FoodServices-2007`) %>%
+  mutate(state = str_to_title(state)) %>%
+  filter(state != "United States") %>%
+  filter(state != "District Of Columbia")
+```
+
+```{r}
+statebins(
+  state_data = state_level_data,
+  state_col = "state",
+  direction = 1,
+  font_size = 3,
+  value_col = "food_services_2007",
+  dark_label = "white",
+  light_label = "yellow",
+  palette = "Oranges"
+) +
+labs(
+  title = "Cartogram of Food Services - Availablity by the State (2007)",
+  fill = "Number of overall - Food Services"
+)
+```
+
+#Question 3 - a
+a. This data contains a year of data with water level (WL) measurements every hour as a function of Time (i.e. 365 x 24 data points!). Since there is a lot of data, clean it up by smoothing the data by calculating a moving average. Use a window approach with window size that covers a range of days (remember, the data is hourly) and graph the smoothed result. Work with the window to see what size window gives you the best view of the changes in the data while still smoothing the noise well. Remember that the moving average is in the Quick-Table calculations inside of the right click menu on the data item in Tableau, and we can compute it in R quite easily as shown in the tutorial. 
+
+```{r}
+data <- read.csv("~/Desktop/Fall Quarter/Data Visualization/HW-2/DATA VISUALIZATION (Tue) - DSC.465 F.25 - 1062025 - 1023 PM/PortlandWaterLevel2003.csv", stringsAsFactors = FALSE)
+
+
+data$DateTime <- as.POSIXct(paste(data$Date, data$Time), 
+                             format = "%m/%d/%Y %H:%M")
+
+
+data <- data %>% arrange(DateTime)
+
+
+value_of_window_size <- 168  # 7 days * 24 hours
+
+data$MA_7day <- rollmean(data$WL, k = value_of_window_size, fill = NA, align = "center")
+
+
+ggplot(data, aes(x = DateTime)) +
+  geom_line(aes(y = WL, color = "Original"), alpha = 0.4, size = 0.4) +
+  geom_line(aes(y = MA_7day, color = "7 Days Moving Average"), size = 1.1) +
+  scale_color_manual(values = c("Original" = "gray60", 
+                                "7 Days Moving Average" = "purple")) +
+  labs(title = "Portland Water Level: Original Data v/s 7 Days Moving Average",
+       subtitle = "Hourly readings smoothed with a 168-hour (7-day) rolling average.",
+       x = "Date",
+       y = "Water Level (WL)",
+       color = "") +
+  theme_minimal() +
+  theme(
+    legend.position = "bottom",
+    plot.title = element_text(face = "bold", size = 15, hjust = 0),
+    plot.subtitle = element_text(size = 11, hjust = 0, color = "blue"),
+    panel.grid.minor = element_blank(),
+    legend.text = element_text(size = 11)
+  )
+```
+
+
+# Question 4 
+
+ReturntothePortlandWaterLeveldataset.RecreateoneofyourplotsfromQuestion3witha custom color scale. Specifically, create a divergent color scale with the average water level at the midpoint and two separate colors used to show when the water is getting very high and very low. The point of this exercise is to experiment with creating a color scale, so choose your own distinctive colors to use for the endpoints and center. Make sure that they are reasonable choices given what you know about color scales. Use HSV space to choose the colors and explain how you made your decision. In Tutorial 4, you can see how to create color scale in ggplot that is interpolated in Lab space.
+
+```{r}
+
+
+df_read_data <- read_csv("~/Desktop/Fall Quarter/Data Visualization/HW-2/DATA VISUALIZATION (Tue) - DSC.465 F.25 - 1062025 - 1023 PM/PortlandWaterLevel2003.csv")
+
+df_prepared_values <- df_read_data %>%
+  mutate(
+    Datetime = as.POSIXct(paste(Date, Time), format = "%m/%d/%Y %H:%M"),
+    Time_Seconds = lubridate::hour(Datetime) * 3600 +
+                   lubridate::minute(Datetime) * 60 +
+                   lubridate::second(Datetime),
+    
+    Water_Level = WL
+  ) %>%
+  filter(!is.na(Water_Level))
+
+mean_wl <- mean(df_prepared_values$Water_Level, na.rm = TRUE)
+min_wl  <- min(df_prepared_values$Water_Level, na.rm = TRUE)
+max_wl  <- max(df_prepared_values$Water_Level, na.rm = TRUE)
+
+hex_low    <- "#26456E" 
+hex_center <- "#EFEFEF" 
+hex_high   <- "#FF6F61" 
+
+center_position <- (mean_wl - min_wl) / (max_wl - min_wl)
+
+p <- ggplot(df_prepared_values, aes(x = Time_Seconds, y = Water_Level, color = Water_Level)) +
+  
+  geom_point(alpha = 0.2, size = 1.5) +
+  
+  scale_color_gradientn(
+    colors = c(hex_low, hex_center, hex_high),
+    values = c(0, center_position, 1),
+    
+    limits = c(min_wl, max_wl),
+    
+    name = "Water Level (ft)"
+  ) +
+  
+  # Format the X-axis (Time of the Day)
+  scale_x_continuous(
+    name = "Time of the Day",
+    breaks = seq(0, 86400, by = 6 * 3600),
+    labels = c("00:00", "06:00", "12:00", "18:00", "24:00")
+  ) +
+  
+  # Add all titles as well as labels
+  labs(
+    title = "Daily Tidal Cycles Colored - by Water Level WL Divergence",
+    subtitle = paste0("Color is centered at the - Average Water Level WL : ", round(mean_wl, 3), " ft"),
+    y = "Water Level (ft)"
+  ) +
+  
+  theme_minimal() +
+  theme(
+    legend.position = "right",
+    plot.title = element_text(face = "bold")
+  )
+
+# Printing the final plot
+print(p)
+
+```
+
+
+
+

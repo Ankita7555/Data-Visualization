@@ -1,0 +1,105 @@
+---
+title: "HW3-Q4"
+author: "Ankita Kshirsagar"
+date: "2025-10-25"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Question 3 - a
+
+
+```{r}
+# Load required library
+library(ggplot2)
+
+#load the data 
+
+data(airquality)
+# Create the scatterplot  - trend line
+ggplot(airquality, aes(x = Wind, y = Solar.R)) +
+  geom_point(color = "#3498db", size = 2, alpha = 0.7) +
+  geom_smooth(method = "lm", se = TRUE, color = "darkred", linewidth = 1) +
+  labs(title = "Relationship between the Wind Speed & Solar Radiation",
+       subtitle = "New York Air Quality Data (May-September)",
+       x = "Wind Speed (mph)",
+       y = "Solar Radiation (lang)") +
+  theme_minimal(base_size = 12) +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold", size = 14),
+        plot.subtitle = element_text(hjust = 0.5, color = "gray50"))
+```
+
+# Question 3 - b
+
+```{r}
+# Load the airquality dataset
+data(airquality)
+
+
+# Overlapping density plots (best for detailed comparison)
+plot(density(airquality$Wind, na.rm = TRUE),
+     main = "Distributions of Wind and Solar",
+     xlab = "Value",
+     col = "red",
+     lwd = 2,
+     xlim = c(0, 350))
+
+lines(density(airquality$Solar.R, na.rm = TRUE),
+      col = "darkgreen",
+      lwd = 2)
+
+legend("topright",
+       legend = c("Wind (mph)", "Solar.R (lang)"),
+       col = c("red", "darkgreen"),
+       lwd = 2)
+```
+
+```{r}
+# Load  library
+library(reshape2)
+library(ggplot2)
+
+#dataset loading
+data(airquality)
+
+
+airquality_long_data_store <- melt(airquality, 
+                        id.vars = c("Month", "Day"),
+                        measure.vars = c("Ozone", "Solar.R", "Wind", "Temp"))
+
+
+
+
+ggplot(airquality_long_data_store, aes(x = variable, y = value, fill = variable)) +
+  geom_boxplot() +
+  labs(title = "Distribution Comparison of All Air Quality Variables",
+       x = "Variable",
+       y = "Value") +
+  theme_minimal() +
+  theme(legend.position = "none")
+
+```
+
+```{r}
+# Load the airquality dataset
+data(airquality)
+
+qqplot(airquality$Wind, airquality$Solar.R,
+       main = "QQ Plot: Wind vs Solar Radiation",
+       xlab = "Wind Speed (mph)",
+       ylab = "Solar Radiation (lang)",
+       pch = 19,
+       col = "darkgreen")
+
+# Add reference line (if distributions were identical)
+abline(0, 1, col = "red", lwd = 2, lty = 2)
+
+# Alternative: Add a line through the quartiles
+qqline(airquality$Solar.R, distribution = function(p) quantile(airquality$Wind, p, na.rm = TRUE),
+       col = "red", lwd = 2)
+```

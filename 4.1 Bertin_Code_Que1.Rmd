@@ -1,0 +1,115 @@
+---
+title: "Hw-4 Que1"
+author: "Ankita Kshirsagar"
+date: "2025-11-16"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(lubridate)
+library(ggplot2)
+```
+
+
+# Load your Q1 2020 data
+```{r}
+divvy_q1 <- read_csv("Divvy_Trips_2020_Q1.csv")
+
+# Preprocess
+divvy_q1 <- divvy_q1 %>%
+  mutate(
+    started_at = ymd_hms(started_at),
+    ended_at = ymd_hms(ended_at),
+    ride_length = as.numeric(difftime(ended_at, started_at, units="mins")),
+    hour_of_day = hour(started_at),
+    day_of_week = wday(started_at, label = TRUE)
+  ) %>%
+  filter(ride_length > 0)
+
+```
+
+```{r}
+
+# 2D binning plot
+ggplot(divvy_q1, aes(x = hour_of_day, y = ride_length)) +
+  geom_bin2d(bins = 30) +
+  scale_fill_viridis_c(option = "plasma") +
+  labs(
+    title = "Ride Length Distribution by Hour of Day (Q1 2020)",
+    x = "Hour of Day",
+    y = "Ride Length (minutes)",
+    fill = "Number of Rides"
+  ) +
+  theme_minimal()
+```
+
+```{r}
+ggplot(divvy_q1, aes(x = hour_of_day, y = ride_length)) +
+  geom_bin2d(bins = 30) +
+  scale_fill_viridis_c(option = "plasma") +
+  labs(
+    title = "Ride Length by Hour: Members vs Casual Riders (Q1 2020)",
+    x = "Hour of Day",
+    y = "Ride Length (minutes)",
+    fill = "Number of Rides"
+  ) +
+  facet_wrap(~member_casual) +
+  theme_minimal()
+
+```
+
+
+```{r}
+# Make sure the columns are factors with no missing values
+divvy_q1 <- divvy_q1 %>%
+  filter(!is.na(member_casual), !is.na(rideable_type)) %>%
+  mutate(
+    member_casual = factor(member_casual),
+    rideable_type = factor(rideable_type)
+  )
+ride_table <- table(divvy_q1$member_casual, divvy_q1$rideable_type)
+ride_table
+ride_table <- ride_table[, colSums(ride_table) > 0]
+
+```
+
+```{r}
+library(vcd)
+
+mosaic(ride_table,
+       shade = TRUE,
+       legend = TRUE,
+       main = "Mosaic Plot: Rideable Type vs Member/Casual (Q1 2020)",
+       xlab = "Member/Casual",
+       ylab = "Rideable Type")
+```
+
+```{r}
+library(tidyverse)
+divvy_q1 <- read_csv("Divvy_Trips_2019_Q4.csv")
+# Prepare data for Bertin matrix
+bertin_data <- divvy_q1 %>%
+  filter(!is.na(member_casual), !is.na(rideable_type)) %>%
+  group_by(member_casual, rideable_type) %>%
+  summarise(count = n(), .groups = 'drop')
+
+# Plot Bertin matrix
+ggplot(bertin_data, aes(x = rideable_type, y = member_casual, fill = count)) +
+  geom_tile(color = "white") +             # grid lines
+  geom_text(aes(label = count), color = "black") +  # show counts
+  scale_fill_viridis_c(option = "plasma") + # color gradient
+  labs(
+    title = "Bertin Matrix: Rideable Type vs Member/Casual (Q1 2020)",
+    x = "Rideable Type",
+    y = "Member/Casual",
+    fill = "Number of Rides"
+  ) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```

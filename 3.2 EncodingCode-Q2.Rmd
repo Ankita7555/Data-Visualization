@@ -1,0 +1,186 @@
+---
+title: "Hw3-Q2"
+author: "Ankita Kshirsagar"
+date: "2025-10-25"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Question 2 - a
+```{r}
+# Loading the required libraries
+library(ggplot2)
+library(dplyr)
+library(scales)
+
+# Read the data
+data_messier <- read.csv("/Users/ankitakshirsagar/Desktop/Fall Quarter/Data Visualization/HW-3/MessierData.csv", 
+                   stringsAsFactors = FALSE,
+                   fileEncoding = "latin1",
+                   check.names = FALSE,
+                   blank.lines.skip = TRUE,
+                   strip.white = TRUE)
+
+colnames(data_messier) <- c("Messier_Num", "NGC_Num", "Kind", "Type", "Distance_LY", 
+                       "Size_arcmin", "Apparent_Magnitude", "RA", "Dec", 
+                       "Constellation", "Season", "Discoverer", "Year", "Remarks")
+
+
+
+# Clean and prepare the data
+messier_clean <- data_messier %>%
+  mutate(
+    Messier_Num = as.numeric(Messier_Num),
+    Distance_LY = as.numeric(Distance_LY),
+    Magnitude = as.numeric(Apparent_Magnitude),
+    Size_arcmin = as.numeric(Size_arcmin)
+  ) %>%
+  filter(!is.na(Messier_Num) & !is.na(Distance_LY) & Distance_LY > 0)
+
+```
+# ============================================
+# PART A: Distance vs Messier Number
+# ============================================
+```{r}
+# Create the main graph with logarithmic scale
+ggplot(messier_clean, aes(x = Messier_Num, y = Distance_LY)) +
+  geom_point(aes(color = Kind), size = 3, alpha = 0.7) +
+  scale_y_log10(
+    breaks = c(1e3, 1e4, 1e5, 1e6, 1e7, 1e8),
+    labels = c("1,000", "10,000", "100,000", "1 Million", "10 Million", "100 Million")
+  ) +
+  scale_x_continuous(breaks = seq(0, 110, by = 10)) +
+  labs(
+    title = "Distance vs Messier Number",
+    subtitle = "Examining patterns in Messier's catalog ordering",
+    x = "Messier Number",
+    y = "Distance from Earth (Light Years) - Logarithmic Scale",
+    color = "Object Type",
+    caption = "Data: Messier Catalog of Deep Sky Objects (18th Century)"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    plot.title = element_text(size = 16, face = "bold", hjust = 0),
+    plot.subtitle = element_text(size = 11, color = "gray40", hjust = 0),
+    axis.title = element_text(size = 12, face = "bold"),
+    legend.position = "right",
+    legend.title = element_text(face = "bold"),
+    panel.grid.minor = element_blank(),
+    panel.grid.major = element_line(color = "gray90"),
+    plot.caption = element_text(size = 9, color = "gray50", hjust = 1)
+  ) +
+  annotation_logticks(sides = "l")
+
+# Save the plot
+ggsave("messier_distance_analysis.png", width = 10, height = 6, dpi = 300)
+```
+
+# Question 2 - b
+
+```{r}
+#  boxplot with jittered points - sorted by median distance
+ggplot(messier_clean, aes(x = reorder(Kind, Distance_LY, FUN = median), 
+                          y = Distance_LY, fill = Kind)) +
+  # Box plot shows median and quartiles
+  geom_boxplot(alpha = 0.7, outlier.shape = NA, width = 0.6) +
+  # Add points individual with jitter
+  geom_jitter(width = 0.2, alpha = 0.5, size = 2.5, shape = 16) +
+  # calculate Logarithmic scale
+  scale_y_log10(
+    breaks = c(1e3, 1e4, 1e5, 1e6, 1e7, 1e8),
+    labels = c("1,000", "10,000", "100,000", "1 Million", "10 Million", "100 Million")
+  ) +
+  scale_fill_brewer(palette = "Set2") +
+  labs(
+    title = "Distance Distribution by Object Type",
+    subtitle = "3 distinct cosmic distance scales: Local objects, Globular Clusters,Galaxies",
+    x = "Object Type : Sorted by Median Distance",
+    y = "(Light Years) Distance from Earth - Logarithmic Scale",
+    caption = "Points show individual Messier objects | Box shows median (line) and middle 50% of data "
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    plot.title = element_text(size = 18, face = "bold", hjust = 0),
+    plot.subtitle = element_text(size = 11, color = "gray60", hjust = 0, margin = margin(b = 10)),
+    axis.title = element_text(size = 13, face = "bold"),
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 11, face = "bold"),
+    axis.text.y = element_text(size = 11),
+    legend.position = "none",
+    panel.grid.major.y = element_line(color = "gray85", linewidth = 0.5),
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor = element_blank(),
+    plot.caption = element_text(size = 9, color = "gray50", hjust = 0),
+    plot.margin = margin(20, 20, 20, 20)
+  ) +
+  annotation_logticks(sides = "l", color = "gray50")
+
+# Save
+ggsave("messier_distance_by_kind.png", width = 12, height = 7, dpi = 300)
+```
+
+# Question 2 - c
+
+```{r}
+# Simple & Clean Visualization: Distance vs Apparent Magnitude
+ggplot(messier_clean, aes(x = Distance_LY, y = Apparent_Magnitude)) +
+  geom_point(aes(color = Kind), size = 3, alpha = 0.8) +
+  
+  # Log scale for distance
+  scale_x_log10(
+    breaks = c(1e3, 1e4, 1e5, 1e6, 1e7, 1e8),
+    labels = c("1k", "10k", "100k", "1M", "10M", "100M")
+  ) +
+  
+  # Invert y-axis (brighter at top)
+  scale_y_reverse(breaks = seq(0, 12, by = 2)) +
+  
+  # Softer color palette
+  scale_color_brewer(palette = "Set2") +
+  
+  labs(
+    title = " Distance vs Apparent Brightness",
+    subtitle = "Brighter objects appear at the top ",
+    x = "Distance from Earth (light-years, log scale)",
+    y = "Apparent Magnitude (brighter at top)",
+    color = "Object Type"
+  ) +
+  
+  theme_minimal(base_size = 13) +
+  theme(
+    plot.title = element_text(size = 18, face = "bold", hjust = 0.5),
+    plot.subtitle = element_text(size = 11, color = "gray40", hjust = 0.5),
+    axis.title = element_text(size = 12, face = "bold"),
+    axis.text = element_text(size = 11, color = "gray25"),
+    legend.position = "right",
+    legend.title = element_text(face = "bold"),
+    panel.grid.major = element_line(color = "gray85"),
+    panel.grid.minor = element_blank(),
+    plot.background = element_rect(fill = "white", color = NA)
+  ) +
+  
+  annotation_logticks(sides = "b", color = "gray60")
+
+
+
+```
+
+# Question 2 - d
+
+```{r}
+
+ggplot(messier_clean, aes(x = Distance_LY, y = Apparent_Magnitude)) +
+  geom_point(aes(color = Kind, size = Size_arcmin), alpha = 0.75) +
+  scale_x_log10(breaks = c(1e3,1e4,1e5,1e6,1e7,1e8), labels = c("1k","10k","100k","1M","10M","100M")) +
+  scale_y_reverse(breaks = seq(0, 12, by = 2)) +
+  scale_size_area(max_size = 8, guide = guide_legend(title = "Angular Size (')")) +
+  scale_color_brewer(palette = "Set2") +
+  labs(title = "Messier : Distance v/s Apparent Brightness (point size = angular size)",
+       x = "Distance (light-years, log scale)",
+       y = "Apparent Magnitude (brighter at top)",
+       color = "Types of Object") +
+  theme_minimal()
+
+```

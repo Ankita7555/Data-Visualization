@@ -1,0 +1,348 @@
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html><head></head><body>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div class="container-fluid main-container">
+
+
+
+
+<div>
+
+
+
+<h1 class="title toc-ignore">homework 2</h1>
+<h4 class="author">Ankita Kshirsagar</h4>
+<h4 class="date">2025-10-09</h4>
+
+</div>
+
+
+<p>#Question</p>
+<p>“This data contains a year of data with water level (WL) measurements
+every hour as a function of Time (i.e.&#160;365 x 24 data points!). Since
+there is a lot of data, clean it up by smoothing the data by calculating
+a moving average. Use a window approach with window size that covers a
+range of days (remember, the data is hourly) and graph the smoothed
+result. Work with the window to see what size window gives you the best
+view of the changes in the data while still smoothing the noise
+well.”</p>
+<div class="section level2">
+<h2>R Markdown</h2>
+</div>
+<div class="section level1">
+<h1>Portland Water Level Time Series Analysis with the Moving
+Average</h1>
+</div>
+<div class="section level1">
+<h1>Loading the required libraries</h1>
+<pre class="r"><code>library(lubridate)</code></pre>
+<pre><code>## 
+## Attaching package: &#39;lubridate&#39;</code></pre>
+<pre><code>## The following objects are masked from &#39;package:base&#39;:
+## 
+##     date, intersect, setdiff, union</code></pre>
+<pre class="r"><code>library(zoo)</code></pre>
+<pre><code>## 
+## Attaching package: &#39;zoo&#39;</code></pre>
+<pre><code>## The following objects are masked from &#39;package:base&#39;:
+## 
+##     as.Date, as.Date.numeric</code></pre>
+<pre class="r"><code>library(ggplot2)
+library(dplyr)</code></pre>
+<pre><code>## 
+## Attaching package: &#39;dplyr&#39;</code></pre>
+<pre><code>## The following objects are masked from &#39;package:stats&#39;:
+## 
+##     filter, lag</code></pre>
+<pre><code>## The following objects are masked from &#39;package:base&#39;:
+## 
+##     intersect, setdiff, setequal, union</code></pre>
+<pre class="r"><code>library(tidyverse)</code></pre>
+<pre><code>## ── Attaching core tidyverse packages ──────────────────────── tidyverse 2.0.0 ──
+## ✔ forcats 1.0.0     ✔ stringr 1.5.1
+## ✔ purrr   1.1.0     ✔ tibble  3.3.0
+## ✔ readr   2.1.5     ✔ tidyr   1.3.1</code></pre>
+<pre><code>## ── Conflicts ────────────────────────────────────────── tidyverse_conflicts() ──
+## ✖ dplyr::filter() masks stats::filter()
+## ✖ dplyr::lag()    masks stats::lag()
+## ℹ Use the conflicted package (&lt;http://conflicted.r-lib.org/&gt;) to force all conflicts to become errors</code></pre>
+<pre class="r"><code>library(scales) </code></pre>
+<pre><code>## 
+## Attaching package: &#39;scales&#39;
+## 
+## The following object is masked from &#39;package:purrr&#39;:
+## 
+##     discard
+## 
+## The following object is masked from &#39;package:readr&#39;:
+## 
+##     col_factor</code></pre>
+<pre class="r"><code>library(&quot;statebins&quot;)</code></pre>
+<p>#QUESTION 1 - C</p>
+<p>c.(Extra credit) Research how to do a diffusion or tile cartogram in
+R or D3 and create a cartogram of the state data from this dataset.</p>
+<pre class="r"><code># Read the tab separated file and store into data frame
+food_data_load &lt;- &quot;~/Desktop/Fall Quarter/Data Visualization/HW-2/DATA VISUALIZATION (Tue) - DSC.465 F.25 - 1062025 - 1023 PM/FoodSrvcByCounty.txt&quot;
+
+
+food_data &lt;- read_tsv(food_data_load, col_types = cols())
+
+state_level_data &lt;- food_data %&gt;%
+  filter(is.na(State)) %&gt;%
+  select(County, `FoodServices-2007`) %&gt;%
+  rename(state = County, food_services_2007 = `FoodServices-2007`) %&gt;%
+  mutate(state = str_to_title(state)) %&gt;%
+  filter(state != &quot;United States&quot;) %&gt;%
+  filter(state != &quot;District Of Columbia&quot;)</code></pre>
+<pre class="r"><code>statebins(
+  state_data = state_level_data,
+  state_col = &quot;state&quot;,
+  direction = 1,
+  font_size = 3,
+  value_col = &quot;food_services_2007&quot;,
+  dark_label = &quot;white&quot;,
+  light_label = &quot;yellow&quot;,
+  palette = &quot;Oranges&quot;
+) +
+labs(
+  title = &quot;Cartogram of Food Services - Availablity by the State (2007)&quot;,
+  fill = &quot;Number of overall - Food Services&quot;
+)</code></pre>
+<p><img src="javascript://" width="672"/></p>
+<p>#Question 3 - a a. This data contains a year of data with water level
+(WL) measurements every hour as a function of Time (i.e.&#160;365 x 24 data
+points!). Since there is a lot of data, clean it up by smoothing the
+data by calculating a moving average. Use a window approach with window
+size that covers a range of days (remember, the data is hourly) and
+graph the smoothed result. Work with the window to see what size window
+gives you the best view of the changes in the data while still smoothing
+the noise well. Remember that the moving average is in the Quick-Table
+calculations inside of the right click menu on the data item in Tableau,
+and we can compute it in R quite easily as shown in the tutorial.</p>
+<pre class="r"><code>data &lt;- read.csv(&quot;~/Desktop/Fall Quarter/Data Visualization/HW-2/DATA VISUALIZATION (Tue) - DSC.465 F.25 - 1062025 - 1023 PM/PortlandWaterLevel2003.csv&quot;, stringsAsFactors = FALSE)
+
+
+data$DateTime &lt;- as.POSIXct(paste(data$Date, data$Time), 
+                             format = &quot;%m/%d/%Y %H:%M&quot;)
+
+
+data &lt;- data %&gt;% arrange(DateTime)
+
+
+value_of_window_size &lt;- 168  # 7 days * 24 hours
+
+data$MA_7day &lt;- rollmean(data$WL, k = value_of_window_size, fill = NA, align = &quot;center&quot;)
+
+
+ggplot(data, aes(x = DateTime)) +
+  geom_line(aes(y = WL, color = &quot;Original&quot;), alpha = 0.4, size = 0.4) +
+  geom_line(aes(y = MA_7day, color = &quot;7 Days Moving Average&quot;), size = 1.1) +
+  scale_color_manual(values = c(&quot;Original&quot; = &quot;gray60&quot;, 
+                                &quot;7 Days Moving Average&quot; = &quot;purple&quot;)) +
+  labs(title = &quot;Portland Water Level: Original Data v/s 7 Days Moving Average&quot;,
+       subtitle = &quot;Hourly readings smoothed with a 168-hour (7-day) rolling average.&quot;,
+       x = &quot;Date&quot;,
+       y = &quot;Water Level (WL)&quot;,
+       color = &quot;&quot;) +
+  theme_minimal() +
+  theme(
+    legend.position = &quot;bottom&quot;,
+    plot.title = element_text(face = &quot;bold&quot;, size = 15, hjust = 0),
+    plot.subtitle = element_text(size = 11, hjust = 0, color = &quot;blue&quot;),
+    panel.grid.minor = element_blank(),
+    legend.text = element_text(size = 11)
+  )</code></pre>
+<pre><code>## Warning: Using `size` aesthetic for lines was deprecated in ggplot2 3.4.0.
+## ℹ Please use `linewidth` instead.
+## This warning is displayed once every 8 hours.
+## Call `lifecycle::last_lifecycle_warnings()` to see where this warning was
+## generated.</code></pre>
+<pre><code>## Warning: Removed 1 row containing missing values or values outside the scale range
+## (`geom_line()`).</code></pre>
+<pre><code>## Warning: Removed 167 rows containing missing values or values outside the scale range
+## (`geom_line()`).</code></pre>
+<p><img src="javascript://" width="672"/></p>
+</div>
+<div class="section level1">
+<h1>Question 4</h1>
+<p>ReturntothePortlandWaterLeveldataset.RecreateoneofyourplotsfromQuestion3witha
+custom color scale. Specifically, create a divergent color scale with
+the average water level at the midpoint and two separate colors used to
+show when the water is getting very high and very low. The point of this
+exercise is to experiment with creating a color scale, so choose your
+own distinctive colors to use for the endpoints and center. Make sure
+that they are reasonable choices given what you know about color scales.
+Use HSV space to choose the colors and explain how you made your
+decision. In Tutorial 4, you can see how to create color scale in ggplot
+that is interpolated in Lab space.</p>
+<pre class="r"><code>df_read_data &lt;- read_csv(&quot;~/Desktop/Fall Quarter/Data Visualization/HW-2/DATA VISUALIZATION (Tue) - DSC.465 F.25 - 1062025 - 1023 PM/PortlandWaterLevel2003.csv&quot;)</code></pre>
+<pre><code>## Rows: 8040 Columns: 7
+## ── Column specification ────────────────────────────────────────────────────────
+## Delimiter: &quot;,&quot;
+## chr  (1): Date
+## dbl  (5): Station, WL, Sigma, I, L
+## time (1): Time
+## 
+## ℹ Use `spec()` to retrieve the full column specification for this data.
+## ℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.</code></pre>
+<pre class="r"><code>df_prepared_values &lt;- df_read_data %&gt;%
+  mutate(
+    Datetime = as.POSIXct(paste(Date, Time), format = &quot;%m/%d/%Y %H:%M&quot;),
+    Time_Seconds = lubridate::hour(Datetime) * 3600 +
+                   lubridate::minute(Datetime) * 60 +
+                   lubridate::second(Datetime),
+    
+    Water_Level = WL
+  ) %&gt;%
+  filter(!is.na(Water_Level))
+
+mean_wl &lt;- mean(df_prepared_values$Water_Level, na.rm = TRUE)
+min_wl  &lt;- min(df_prepared_values$Water_Level, na.rm = TRUE)
+max_wl  &lt;- max(df_prepared_values$Water_Level, na.rm = TRUE)
+
+hex_low    &lt;- &quot;#26456E&quot; 
+hex_center &lt;- &quot;#EFEFEF&quot; 
+hex_high   &lt;- &quot;#FF6F61&quot; 
+
+center_position &lt;- (mean_wl - min_wl) / (max_wl - min_wl)
+
+p &lt;- ggplot(df_prepared_values, aes(x = Time_Seconds, y = Water_Level, color = Water_Level)) +
+  
+  geom_point(alpha = 0.2, size = 1.5) +
+  
+  scale_color_gradientn(
+    colors = c(hex_low, hex_center, hex_high),
+    values = c(0, center_position, 1),
+    
+    limits = c(min_wl, max_wl),
+    
+    name = &quot;Water Level (ft)&quot;
+  ) +
+  
+  # Format the X-axis (Time of the Day)
+  scale_x_continuous(
+    name = &quot;Time of the Day&quot;,
+    breaks = seq(0, 86400, by = 6 * 3600),
+    labels = c(&quot;00:00&quot;, &quot;06:00&quot;, &quot;12:00&quot;, &quot;18:00&quot;, &quot;24:00&quot;)
+  ) +
+  
+  # Add all titles as well as labels
+  labs(
+    title = &quot;Daily Tidal Cycles Colored - by Water Level WL Divergence&quot;,
+    subtitle = paste0(&quot;Color is centered at the - Average Water Level WL : &quot;, round(mean_wl, 3), &quot; ft&quot;),
+    y = &quot;Water Level (ft)&quot;
+  ) +
+  
+  theme_minimal() +
+  theme(
+    legend.position = &quot;right&quot;,
+    plot.title = element_text(face = &quot;bold&quot;)
+  )
+
+# Printing the final plot
+print(p)</code></pre>
+<pre><code>## Warning: Removed 1 row containing missing values or values outside the scale range
+## (`geom_point()`).</code></pre>
+<p><img src="javascript://" width="672"/></p>
+</div>
+
+
+
+
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<script type="module" src="https://s.brightspace.com/lib/bsi/2025.12.238/unbundled/mathjax.js"></script><script type="text/javascript">document.addEventListener('DOMContentLoaded', function() {
+						if (document.querySelector('math, .d2l-element, .d2l-cplus-layout') || /\$\$|\\\(|\\\[|\\begin{|\\ref{|\\eqref{/.test(document.body.innerHTML)) {
+							document.querySelectorAll('mspace[linebreak="newline"]').forEach(elm => {
+								elm.setAttribute('style', 'display: block; height: 0.5rem;');
+							});
+
+							document.querySelectorAll('math mmultiscripts > none').forEach(elm => {
+								const mrow = document.createElementNS('http://www.w3.org/1998/Math/MathML', 'mrow');
+								elm.replaceWith(mrow);
+							});
+
+							window.D2L.MathJax.loadMathJax({
+								outputScale: 1.5,
+								renderLatex: false,
+								enableMML3Support: false
+							});
+						}
+					});</script><script type="module" src="https://s.brightspace.com/lib/bsi/2025.12.238/unbundled/prism.js"></script><script type="text/javascript">document.addEventListener('DOMContentLoaded', function() {
+					document.querySelectorAll('.d2l-code').forEach(code => {
+						window.D2L.Prism.formatCodeElement(code);
+					});
+				});</script><script type="module" src="https://s.brightspace.com/lib/bsi/2025.12.238/unbundled/embeds.js"></script><script type="text/javascript">document.addEventListener('DOMContentLoaded', function() {
+					window.D2L.EmbedRenderer.renderEmbeds(document.body);
+				});</script></body></html>
